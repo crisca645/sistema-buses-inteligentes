@@ -14,6 +14,14 @@ public class User {
     private  String email;
     private  String password;
 
+    //campos nuevos para el oggin con google
+
+    private String authProvider;
+    private String providerId;
+    private String picture;
+    private Boolean emailVerified;
+    private Boolean active;
+
 
     public User() {
     }

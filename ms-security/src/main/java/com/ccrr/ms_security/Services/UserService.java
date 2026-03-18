@@ -19,24 +19,34 @@ public class UserService {
 
     @Autowired
     private SessionRepository theSessionRepository;
+
     @Autowired
     private ProfileRepository theProfileRepository;
 
-    //flata configurar
     @Autowired
-    private  EncryptionService theEncryptionService;
+    private EncryptionService theEncryptionService;
 
     public List<User> find() {
-
         return this.theUserRepository.findAll();
     }
 
     public User findById(String id) {
-        User theUser = this.theUserRepository.findById(id).orElse(null);
-        return theUser;
+        return this.theUserRepository.findById(id).orElse(null);
     }
 
     public User create(User newUser) {
+        if (newUser.getPassword() != null && !newUser.getPassword().isEmpty()) {
+            newUser.setPassword(theEncryptionService.convertSHA256(newUser.getPassword()));
+        }
+
+        if (newUser.getAuthProvider() == null || newUser.getAuthProvider().isEmpty()) {
+            newUser.setAuthProvider("LOCAL");
+        }
+
+        if (newUser.getActive() == null) {
+            newUser.setActive(true);
+        }
+
         return this.theUserRepository.save(newUser);
     }
 
@@ -46,7 +56,17 @@ public class UserService {
         if (actualUser != null) {
             actualUser.setName(newUser.getName());
             actualUser.setEmail(newUser.getEmail());
-            actualUser.setPassword(newUser.getPassword());
+
+            if (newUser.getPassword() != null && !newUser.getPassword().isEmpty()) {
+                actualUser.setPassword(theEncryptionService.convertSHA256(newUser.getPassword()));
+            }
+
+            actualUser.setAuthProvider(newUser.getAuthProvider());
+            actualUser.setProviderId(newUser.getProviderId());
+            actualUser.setPicture(newUser.getPicture());
+            actualUser.setEmailVerified(newUser.getEmailVerified());
+            actualUser.setActive(newUser.getActive());
+
             this.theUserRepository.save(actualUser);
             return actualUser;
         } else {
@@ -61,44 +81,36 @@ public class UserService {
         }
     }
 
-    /**
-     * Permite asociar un usuario y un perfil. Para que funcione ambos
-     * ya deben de existir en la base de datos
-     *
-     * @param userId
-     //@param profileId
-     * @return
-     */
-    public boolean addSession(String userId,String sessionId){
-        User theUser=this.theUserRepository.findById(userId).orElse(null);
-        Session theSession=this.theSessionRepository.findById(sessionId).orElse(null);
-        if(theUser!=null && theSession!=null){
+    public boolean addSession(String userId, String sessionId) {
+        User theUser = this.theUserRepository.findById(userId).orElse(null);
+        Session theSession = this.theSessionRepository.findById(sessionId).orElse(null);
+        if (theUser != null && theSession != null) {
             theSession.setUser(theUser);
             this.theSessionRepository.save(theSession);
             return true;
-        }else{
-            return false;
-        }
-    }
-    public boolean removeSession(String userId,String sessionId){
-        User theUser=this.theUserRepository.findById(userId).orElse(null);
-        Session theSession=this.theSessionRepository.findById(sessionId).orElse(null);
-        if(theUser!=null && theSession!=null){
-            theSession.setUser(null);
-            this.theSessionRepository.save(theSession);
-            return true;
-        }else{
+        } else {
             return false;
         }
     }
 
-    //---no se sabe quisas se tenga que eliminar
+    public boolean removeSession(String userId, String sessionId) {
+        User theUser = this.theUserRepository.findById(userId).orElse(null);
+        Session theSession = this.theSessionRepository.findById(sessionId).orElse(null);
+        if (theUser != null && theSession != null) {
+            theSession.setUser(null);
+            this.theSessionRepository.save(theSession);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     public boolean addProfile(String userId, String profileId) {
         User theUser = this.theUserRepository.findById(userId).orElse(null);
         Profile theProfile = this.theProfileRepository.findById(profileId).orElse(null);
         if (theUser != null && theProfile != null) {
             theProfile.setUser(theUser);
-            this.theProfileRepository.save((theProfile));
+            this.theProfileRepository.save(theProfile);
             return true;
         } else {
             return false;
@@ -110,6 +122,7 @@ public class UserService {
         Profile theProfile = this.theProfileRepository.findById(profileId).orElse(null);
         if (theUser != null && theProfile != null) {
             theProfile.setUser(null);
+            this.theProfileRepository.save(theProfile);
             return true;
         } else {
             return false;
