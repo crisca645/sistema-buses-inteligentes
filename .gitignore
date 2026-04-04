@@ -1,0 +1,14 @@
+# Compilados
+target/
+
+# Archivos locales
+application-local.properties
+
+# IntelliJ
+.idea/
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
