@@ -25,6 +25,40 @@ public class GithubAuthService {
 
         if (githubUser == null) return null;
 
+        // CASO ESPECIAL: EMAIL REQUERIDO
+        if (Boolean.TRUE.equals(githubUser.getEmailRequired())) {
+            // Crear usuario temporal sin email, inactivo
+            User user = userRepository
+                    .getUserByAuthProviderAndProviderId("GITHUB", githubUser.getId());
+
+            if (user == null) {
+                user = new User();
+                user.setName(githubUser.getName());
+                user.setEmail(null); // Sin email por ahora
+                user.setPassword("");
+                user.setAuthProvider("GITHUB");
+                user.setProviderId(githubUser.getId());
+                user.setPicture(githubUser.getAvatarUrl());
+                user.setEmailVerified(false);
+                user.setActive(false); // Inactivo hasta que proporcione email
+                user.setUsername(githubUser.getLogin());
+                user = userRepository.save(user);
+            }
+
+            // Generar JWT temporal
+            String token = jwtService.generateToken(user);
+
+            AuthResponse response = new AuthResponse();
+            response.setToken(token);
+            response.setUser(user);
+            response.setNewUser(true);
+            response.setRequiresAdditionalInfo(true);
+            response.setEmailRequired(true);
+
+            return response;
+        }
+
+        // FLUJO NORMAL: HAY EMAIL
         User user = userRepository
                 .getUserByAuthProviderAndProviderId("GITHUB", githubUser.getId());
 
@@ -56,6 +90,7 @@ public class GithubAuthService {
         response.setUser(user);
         response.setNewUser(isNewUser);
         response.setRequiresAdditionalInfo(isNewUser);
+        response.setEmailRequired(false);
 
         return response;
     }

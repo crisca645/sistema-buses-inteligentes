@@ -58,12 +58,22 @@ public class GithubTokenVerifierService {
                 }
             }
 
-            // 🔴 SI AÚN NO HAY EMAIL → FALLAR
+            // SI AÚN NO HAY EMAIL → RETORNAR DTO CON EMAIL REQUIRED
             if (email == null || email.isBlank()) {
-                return null;
+                // 3. Construir DTO con emailRequired = true
+                GithubUserDto dto = new GithubUserDto();
+                dto.setId(String.valueOf(body.get("id")));
+                dto.setLogin((String) body.get("login"));
+                dto.setName((String) body.get("name"));
+                dto.setEmail(null); // Email nulo
+                dto.setAvatarUrl((String) body.get("avatar_url"));
+                dto.setEmailVerified(false);
+                dto.setEmailRequired(true);
+                
+                return dto;
             }
 
-            // 🔹 3. Construir DTO
+            // 3. Construir DTO
             GithubUserDto dto = new GithubUserDto();
             dto.setId(String.valueOf(body.get("id")));
             dto.setLogin((String) body.get("login"));
@@ -71,6 +81,7 @@ public class GithubTokenVerifierService {
             dto.setEmail(email);
             dto.setAvatarUrl((String) body.get("avatar_url"));
             dto.setEmailVerified(true);
+            dto.setEmailRequired(false);
 
             return dto;
 

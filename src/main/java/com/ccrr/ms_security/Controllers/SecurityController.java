@@ -127,6 +127,8 @@ public class SecurityController {
         res.put("token", authResponse.getToken());
         res.put("user", authResponse.getUser());
         res.put("isNewUser", authResponse.isNewUser());
+        res.put("requiresAdditionalInfo", authResponse.isRequiresAdditionalInfo());
+        res.put("emailRequired", authResponse.isEmailRequired());
 
         return res;
     }
@@ -135,7 +137,7 @@ public class SecurityController {
     public HashMap<String, Object> microsoftLogin(@RequestBody MicrosoftLoginRequest request,
                                                   final HttpServletResponse response) throws IOException {
 
-        AuthResponse authResponse = microsoftAuthService.loginWithMicrosoft(request.getIdToken());
+        AuthResponse authResponse = microsoftAuthService.loginWithMicrosoft(request.getIdToken(), request.getAccessToken());
 
         if (authResponse == null) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token Microsoft inválido");
@@ -251,6 +253,26 @@ public class SecurityController {
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token GitHub inválido");
                     return new HashMap<>();
                 }
+                
+                // Validar email del proveedor
+                if (githubUser.getEmail() == null || githubUser.getEmail().isBlank()) {
+                    response.sendError(422, "No se pudo obtener el email del proveedor para verificar la identidad");
+                    return new HashMap<>();
+                }
+                
+                // Comparar emails (case-insensitive)
+                if (!githubUser.getEmail().equalsIgnoreCase(tokenUser.getEmail())) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "El email del proveedor no coincide con el email de tu cuenta");
+                    return new HashMap<>();
+                }
+                
+                // Verificar que el email no esté ya vinculado a otro usuario
+                User existingUser = userRepository.getUserByEmail(githubUser.getEmail());
+                if (existingUser != null && !existingUser.getId().equals(user.getId())) {
+                    response.sendError(HttpServletResponse.SC_CONFLICT, "Este email ya está asociado a otra cuenta");
+                    return new HashMap<>();
+                }
+                
                 user.setAuthProvider("GITHUB");
                 user.setProviderId(githubUser.getId());
                 user.setUsername(githubUser.getLogin());
@@ -263,6 +285,26 @@ public class SecurityController {
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token Google inválido");
                     return new HashMap<>();
                 }
+                
+                // Validar email del proveedor
+                if (googleUser.getEmail() == null || googleUser.getEmail().isBlank()) {
+                    response.sendError(422, "No se pudo obtener el email del proveedor para verificar la identidad");
+                    return new HashMap<>();
+                }
+                
+                // Comparar emails (case-insensitive)
+                if (!googleUser.getEmail().equalsIgnoreCase(tokenUser.getEmail())) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "El email del proveedor no coincide con el email de tu cuenta");
+                    return new HashMap<>();
+                }
+                
+                // Verificar que el email no esté ya vinculado a otro usuario
+                User existingUser = userRepository.getUserByEmail(googleUser.getEmail());
+                if (existingUser != null && !existingUser.getId().equals(user.getId())) {
+                    response.sendError(HttpServletResponse.SC_CONFLICT, "Este email ya está asociado a otra cuenta");
+                    return new HashMap<>();
+                }
+                
                 user.setAuthProvider("GOOGLE");
                 user.setProviderId(googleUser.getSub());
                 if (user.getPicture() == null) user.setPicture(googleUser.getPicture());
@@ -274,6 +316,26 @@ public class SecurityController {
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token Microsoft inválido");
                     return new HashMap<>();
                 }
+                
+                // Validar email del proveedor
+                if (microsoftUser.getEmail() == null || microsoftUser.getEmail().isBlank()) {
+                    response.sendError(422, "No se pudo obtener el email del proveedor para verificar la identidad");
+                    return new HashMap<>();
+                }
+                
+                // Comparar emails (case-insensitive)
+                if (!microsoftUser.getEmail().equalsIgnoreCase(tokenUser.getEmail())) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "El email del proveedor no coincide con el email de tu cuenta");
+                    return new HashMap<>();
+                }
+                
+                // Verificar que el email no esté ya vinculado a otro usuario
+                User existingUser = userRepository.getUserByEmail(microsoftUser.getEmail());
+                if (existingUser != null && !existingUser.getId().equals(user.getId())) {
+                    response.sendError(HttpServletResponse.SC_CONFLICT, "Este email ya está asociado a otra cuenta");
+                    return new HashMap<>();
+                }
+                
                 user.setAuthProvider("MICROSOFT");
                 user.setProviderId(microsoftUser.getSub());
             }
@@ -289,6 +351,58 @@ public class SecurityController {
         HashMap<String, Object> res = new HashMap<>();
         res.put("message", "Cuenta " + provider.toUpperCase() + " vinculada correctamente");
         res.put("user", user);
+        return res;
+    }
+
+    @PostMapping("github/complete-email")
+    public HashMap<String, Object> completeGithubEmail(
+            @RequestBody GithubCompleteEmailRequest request,
+            @RequestHeader("Authorization") String authHeader,
+            final HttpServletResponse response) throws IOException {
+
+        String jwt = authHeader.replace("Bearer ", "");
+        User tokenUser = jwtService.getUserFromToken(jwt);
+
+        if (tokenUser == null) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido");
+            return new HashMap<>();
+        }
+
+        User user = userRepository.findById(tokenUser.getId()).orElse(null);
+        if (user == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Usuario no encontrado");
+            return new HashMap<>();
+        }
+
+        // Validar que sea un usuario de GitHub sin email
+        if (!"GITHUB".equals(user.getAuthProvider()) || user.getEmail() != null) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Operación no válida para este usuario");
+            return new HashMap<>();
+        }
+
+        // Validar que el email no esté ya registrado
+        User existingUser = userRepository.getUserByEmail(request.getEmail());
+        if (existingUser != null && !existingUser.getId().equals(user.getId())) {
+            response.sendError(HttpServletResponse.SC_CONFLICT, "El email ya está registrado por otro usuario");
+            return new HashMap<>();
+        }
+
+        // Asignar email y activar usuario
+        user.setEmail(request.getEmail());
+        user.setEmailVerified(true);
+        user.setActive(true);
+        user = userRepository.save(user);
+
+        // Generar nuevo JWT con usuario actualizado
+        String newToken = jwtService.generateToken(user);
+
+        HashMap<String, Object> res = new HashMap<>();
+        res.put("message", "Email completado correctamente");
+        res.put("token", newToken);
+        res.put("user", user);
+        res.put("emailRequired", false);
+        res.put("requiresAdditionalInfo", false);
+
         return res;
     }
 }
