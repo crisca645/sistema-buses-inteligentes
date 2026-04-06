@@ -13,25 +13,20 @@ public class PermissionService {
     @Autowired
     private PermissionRepository thePermissionRepository;
 
-
     public List<Permission> find() {
         return this.thePermissionRepository.findAll();
     }
-
 
     public Permission findById(String id) {
         return this.thePermissionRepository.findById(id).orElse(null);
     }
 
-
     public Permission create(Permission newPermission) {
         return this.thePermissionRepository.save(newPermission);
     }
 
-
     public Permission update(String id, Permission newPermission) {
         Permission actualPermission = this.thePermissionRepository.findById(id).orElse(null);
-
         if (actualPermission != null) {
             actualPermission.setUrl(newPermission.getUrl());
             actualPermission.setMethod(newPermission.getMethod());
@@ -47,6 +42,28 @@ public class PermissionService {
         Permission thePermission = this.thePermissionRepository.findById(id).orElse(null);
         if (thePermission != null) {
             this.thePermissionRepository.delete(thePermission);
+        }
+    }
+
+    public void ensureDefaultPermissions() {
+        List<String[]> defaultPermissions = List.of(
+                new String[]{"GET", "/users", "User"},
+                new String[]{"POST", "/users", "User"},
+                new String[]{"GET", "/roles", "Role"},
+                new String[]{"POST", "/roles", "Role"},
+                new String[]{"GET", "/permissions", "Permission"},
+                new String[]{"POST", "/permissions", "Permission"}
+        );
+
+        for (String[] perm : defaultPermissions) {
+            Permission existing = thePermissionRepository.findByMethodAndUrl(perm[0], perm[1]);
+            if (existing == null) {
+                Permission permission = new Permission();
+                permission.setMethod(perm[0]);
+                permission.setUrl(perm[1]);
+                permission.setModel(perm[2]);
+                thePermissionRepository.save(permission);
+            }
         }
     }
 }

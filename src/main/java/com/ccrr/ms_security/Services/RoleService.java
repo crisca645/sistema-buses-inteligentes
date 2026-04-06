@@ -27,7 +27,6 @@ public class RoleService {
 
     public Role update(String id, Role newRole){
         Role actualRole = this.theRoleRepository.findById(id).orElse(null);
-
         if(actualRole != null){
             actualRole.setName(newRole.getName());
             actualRole.setDescription(newRole.getDescription());
@@ -45,4 +44,15 @@ public class RoleService {
         }
     }
 
+    public void ensureDefaultRoles() {
+        List<String> defaultRoles = List.of("ADMIN", "USER", "MODERATOR");
+        for (String roleName : defaultRoles) {
+            if (theRoleRepository.findByName(roleName) == null) {
+                Role role = new Role();
+                role.setName(roleName);
+                role.setDescription("Rol por defecto: " + roleName);
+                theRoleRepository.save(role);
+            }
+        }
+    }
 }

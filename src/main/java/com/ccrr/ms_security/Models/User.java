@@ -1,12 +1,10 @@
 package com.ccrr.ms_security.Models;
 
 import lombok.Data;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Data
-
 @Document
 public class User {
     @Id
@@ -14,19 +12,24 @@ public class User {
     private String name;
     private String lastname;
     private String email;
-
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
-    public User() {
+    // OAuth fields
+    private String authProvider;
+    private String providerId;
+    private String picture;
+    private Boolean emailVerified;
+    private Boolean active;
+    private String username;
+    private String address;
+    private String phone;
 
+    public User() {
     }
 
-
-    public User(String email, String password, String name, String lastname) {
-        this.email = email;
+    public User(String password, String email, String name) {
         this.password = password;
+        this.email = email;
         this.name = name;
-        this.lastname=lastname;
     }
 }

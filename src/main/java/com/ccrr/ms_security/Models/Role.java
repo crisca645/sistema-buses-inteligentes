@@ -12,6 +12,9 @@ public class Role {
     private String name;
     private String description;
 
+    public Role() {
+    }
+
     public Role(String description, String name) {
         this.description = description;
         this.name = name;
