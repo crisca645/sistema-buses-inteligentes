@@ -15,13 +15,15 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(securityInterceptor)
-<<<<<<< HEAD
-                .addPathPatterns("/api/**") //controla todo lo que empiesa por /api se valida por el interceptor
-                .excludePathPatterns("/api/public/**");
-=======
                 .addPathPatterns("/**")
                 .excludePathPatterns(
                         "/security/login",
+                        "/security/forgot-password",
+                        "/security/reset-password",
+                        "/security/google/callback",
+                        "/security/2fa/verify",
+                        "/security/2fa/resend",
+                        "/security/2fa/cancel",
                         "/users/register",
                         "/error",
                         "/permissions",
@@ -30,12 +32,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/roles/**",
                         "/role-permission/**",
                         "/user-role/**",
-                        "/security/forgot-password",
-                        "/security/reset-password",
-                        "/security/google/callback"
->>>>>>> origin/feature/login-registro-sesion
-
-                        );
-
+                        "/api/public/**"
+                );
     }
 }
