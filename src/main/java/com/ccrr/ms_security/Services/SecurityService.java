@@ -30,7 +30,6 @@ public class SecurityService {
     @Autowired
     private EncryptionService theEncryptionService;
 
-
     @Autowired
     private JwtService theJwtService;
 
@@ -55,7 +54,7 @@ public class SecurityService {
         if (theActualUser != null &&
                 theActualUser.getPassword().equals(theEncryptionService.convertSHA256(password))) {
 
-            String roleName = "USER"; // Aquí puedes obtener el nombre del rol del usuario desde la base de datos si es necesario
+            String roleName = "USER";
             String token = theJwtService.generateToken(theActualUser, roleName);
 
             Session newSession = new Session();
@@ -73,15 +72,16 @@ public class SecurityService {
 
         return null;
     }
+
     public User findOrCreateGoogleUser(String email, String name, String lastname) {
-        // Buscar si ya existe
+        if (email == null) return null;
+
         User existingUser = theUserRepository.getUserByEmail(email.trim().toLowerCase());
 
         if (existingUser != null) {
             return existingUser;
         }
 
-        // Si no existe, crear cuenta automáticamente
         User newUser = new User();
         newUser.setEmail(email.trim().toLowerCase());
         newUser.setName(name != null ? name : "Usuario");
@@ -102,12 +102,3 @@ public class SecurityService {
         return theJwtService.generateToken(user, roleName);
     }
 }
-    /*
-    public boolean permissionsValidation(final HttpServletRequest request,
-                                         @RequestBody Permission thePermission) {
-        boolean success=this.theValidatorsService.validationRolePermission(request,thePermission.getUrl(),thePermission.getMethod());
-        return success;
-    }
-    */
-
-

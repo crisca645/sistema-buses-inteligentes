@@ -63,6 +63,7 @@ public class SecurityController {
                     .body(Map.of("message", e.getMessage()));
         }
     }
+
     @GetMapping("google/callback")
     public ResponseEntity<?> googleCallback(@AuthenticationPrincipal OAuth2User oauthUser) {
         try {
@@ -70,15 +71,23 @@ public class SecurityController {
             String name = oauthUser.getAttribute("given_name");
             String lastname = oauthUser.getAttribute("family_name");
 
-            // Buscar si el usuario ya existe
+            if (email == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "No se pudo obtener el email del proveedor. Asegúrate de tener un email público."));
+            }
+
             User existingUser = theSecurityService.findOrCreateGoogleUser(email, name, lastname);
 
-            // Generar token JWT
+            if (existingUser == null) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("message", "No se pudo crear o encontrar el usuario."));
+            }
+
             String token = theSecurityService.generateTokenForUser(existingUser);
 
             return ResponseEntity.ok(Map.of(
                     "token", token,
-                    "message", "Inicio de sesión con Google exitoso"
+                    "message", "Inicio de sesión exitoso"
             ));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
