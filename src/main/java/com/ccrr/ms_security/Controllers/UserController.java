@@ -2,6 +2,7 @@ package com.ccrr.ms_security.Controllers;
 
 import com.ccrr.ms_security.Models.RegisterRequest;
 import com.ccrr.ms_security.Models.User;
+import com.ccrr.ms_security.Services.RecaptchaService;
 import com.ccrr.ms_security.Services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,9 @@ public class UserController {
     @Autowired
     private UserService theUserService;
 
+    @Autowired
+    private RecaptchaService recaptchaService;
+
     @GetMapping("")
     public List<User> find() {
         return this.theUserService.find();
@@ -32,6 +36,13 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         try {
+            boolean captchaValid = recaptchaService.verify(request.getRecaptchaToken());
+            if (!captchaValid) {
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Verificación reCAPTCHA fallida"));
+            }
+
             this.theUserService.create(request);
 
             return ResponseEntity
@@ -100,6 +111,7 @@ public class UserController {
                     .body(Map.of("message", "User or Session not found"));
         }
     }
+
     @DeleteMapping("{userId}/session/{sessionId}")
     public ResponseEntity<Map<String, String>> deleteUserSession(
             @PathVariable String userId,
@@ -114,6 +126,4 @@ public class UserController {
                     .body(Map.of("message", "User or Session not found"));
         }
     }
-
-
 }
