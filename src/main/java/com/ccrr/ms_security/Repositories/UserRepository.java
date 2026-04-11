@@ -4,16 +4,19 @@ import com.ccrr.ms_security.Models.User;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 
-public interface UserRepository extends MongoRepository <User,String> {
-    @Query("{'email': ?0}")
-    public User getUserByEmail(String email);
+import java.util.List;
 
+public interface UserRepository extends MongoRepository<User, String> {
+    @Query("{'email': ?0}")
+    User getUserByEmail(String email);
 
     @Query("{'providerId': ?0}")
-    public User getUserByProviderId(String providerId);  //Sirve para buscar directamente por el id del proveedor.
+    User getUserByProviderId(String providerId);
 
     @Query("{'authProvider': ?0, 'providerId': ?1}")
-    public User getUserByAuthProviderAndProviderId(String authProvider, String providerId);
+    User getUserByAuthProviderAndProviderId(String authProvider, String providerId);
+
+    List<User> findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(String name, String email);
 
     //Este es el más importante para OAuth.
     //
