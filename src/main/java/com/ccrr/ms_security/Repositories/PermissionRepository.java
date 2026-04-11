@@ -10,4 +10,6 @@ public interface PermissionRepository extends MongoRepository<Permission, String
     Permission getPermission(String url, String method);
 
     Permission findByMethodAndUrl(String method, String url);
+
+    boolean existsByUrlAndMethod(String url, String method);
 }

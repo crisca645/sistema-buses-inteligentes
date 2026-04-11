@@ -1,10 +1,14 @@
 package com.ccrr.ms_security.Services;
 
-import com.ccrr.ms_security.Repositories.SessionRepository;
-
-import com.ccrr.ms_security.Models.*;
+import com.ccrr.ms_security.Models.Permission;
+import com.ccrr.ms_security.Models.Role;
+import com.ccrr.ms_security.Models.RolePermission;
+import com.ccrr.ms_security.Models.Session;
+import com.ccrr.ms_security.Models.User;
+import com.ccrr.ms_security.Models.UserRole;
 import com.ccrr.ms_security.Repositories.PermissionRepository;
 import com.ccrr.ms_security.Repositories.RolePermissionRepository;
+import com.ccrr.ms_security.Repositories.SessionRepository;
 import com.ccrr.ms_security.Repositories.UserRepository;
 import com.ccrr.ms_security.Repositories.UserRoleRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,13 +22,16 @@ import java.util.List;
 public class ValidatorsService {
     @Autowired
     private JwtService jwtService;
+
     @Autowired
     private SessionRepository theSessionRepository;
 
     @Autowired
     private PermissionRepository thePermissionRepository;
+
     @Autowired
     private UserRepository theUserRepository;
+
     @Autowired
     private RolePermissionRepository theRolePermissionRepository;
 
@@ -33,26 +40,21 @@ public class ValidatorsService {
 
     private static final String BEARER_PREFIX = "Bearer ";
 
-    public boolean validationRolePermission(HttpServletRequest request,
-                                            String url,
-                                            String method) {
+    public boolean validationRolePermission(HttpServletRequest request, String url, String method) {
         boolean success = false;
         User theUser = this.getUser(request);
         if (theUser != null) {
-            System.out.println("Antes URL " + url + " metodo " + method);
             url = url.replaceAll("[0-9a-fA-F]{24}|\\d+", "?");
-            System.out.println("URL " + url + " metodo " + method);
             Permission thePermission = this.thePermissionRepository.getPermission(url, method);
-
             List<UserRole> roles = this.theUserRoleRepository.getRolesByUser(theUser.getId());
             int i = 0;
-            while (i < roles.size() && success == false) {
+            while (i < roles.size() && !success) {
                 UserRole actual = roles.get(i);
                 Role theRole = actual.getRole();
                 if (theRole != null && thePermission != null) {
-                    System.out.println("Rol " + theRole.getId() + " Permission " + thePermission.getId());
-                    RolePermission theRolePermission = this.theRolePermissionRepository.getRolePermission(theRole.getId(), thePermission.getId());
-                    if (theRolePermission != null) {
+                    List<RolePermission> rolePermissions = this.theRolePermissionRepository
+                            .getRolePermissions(theRole.getId(), thePermission.getId());
+                    if (rolePermissions != null && !rolePermissions.isEmpty()) {
                         success = true;
                     }
                 } else {
@@ -60,7 +62,6 @@ public class ValidatorsService {
                 }
                 i += 1;
             }
-
         }
         return success;
     }
@@ -72,19 +73,19 @@ public class ValidatorsService {
         }
 
         String token = authorizationHeader.substring(BEARER_PREFIX.length());
-
-        // 1) JWT válido criptográficamente y no expirado
         if (!jwtService.validateToken(token)) {
             return null;
         }
 
-        // 2) Token debe existir en sesión activa de BD
         Session theSession = this.theSessionRepository.findByToken(token);
         if (theSession == null || theSession.getExpiration() == null || theSession.getExpiration().before(new Date())) {
             return null;
         }
 
-        // 3) Usuario del token debe existir
+        if (theSession.getCode2FA() != null) {
+            return null;
+        }
+
         User tokenUser = jwtService.getUserFromToken(token);
         if (tokenUser == null) {
             return null;
