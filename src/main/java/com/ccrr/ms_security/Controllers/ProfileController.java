@@ -16,7 +16,7 @@ public class ProfileController {
     private ProfileService theProfileService;
 
     @GetMapping("")
-    public List<Profile> find() {  //List<Profile> ese Profile hace referencia al profile de modells
+    public List<Profile> find() {
         return this.theProfileService.find();
     }
 
@@ -40,5 +40,5 @@ public class ProfileController {
         this.theProfileService.delete(id);
     }
 
-}
 
+}

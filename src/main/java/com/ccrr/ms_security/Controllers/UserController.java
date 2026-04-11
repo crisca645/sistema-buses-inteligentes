@@ -1,6 +1,8 @@
 package com.ccrr.ms_security.Controllers;
 
+import com.ccrr.ms_security.Models.RegisterRequest;
 import com.ccrr.ms_security.Models.User;
+import com.ccrr.ms_security.Services.RecaptchaService;
 import com.ccrr.ms_security.Services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -11,14 +13,15 @@ import java.util.List;
 import java.util.Map;
 
 @CrossOrigin
-//aplicacion de tipo rest
 @RestController
-//las ruta del servidor se siertos empoint con solo llamar /users vamos a tener todo la logica de esta clase
 @RequestMapping("/users")
 public class UserController {
 
     @Autowired
     private UserService theUserService;
+
+    @Autowired
+    private RecaptchaService recaptchaService;
 
     @GetMapping("")
     public List<User> find() {
@@ -30,9 +33,27 @@ public class UserController {
         return this.theUserService.findById(id);
     }
 
-    @PostMapping
-    public User create(@RequestBody User newUser) { // se manda un requiest y hace un casteo de los datos
-        return this.theUserService.create(newUser);
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+        try {
+            boolean captchaValid = recaptchaService.verify(request.getRecaptchaToken());
+            if (!captchaValid) {
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Verificación reCAPTCHA fallida"));
+            }
+
+            this.theUserService.create(request);
+
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body(Map.of("message", "Usuario registrado correctamente"));
+
+        } catch (RuntimeException e) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 
     @PutMapping("{id}")
@@ -60,6 +81,7 @@ public class UserController {
                     .body(Map.of("message", "User or Profile not found"));
         }
     }
+
     @DeleteMapping("{userId}/profile/{profileId}")
     public ResponseEntity<Map<String, String>> deleteUserProfile(
             @PathVariable String userId,
@@ -75,7 +97,6 @@ public class UserController {
         }
     }
 
-
     @PostMapping("{userId}/session/{sessionId}")
     public ResponseEntity<Map<String, String>> addUserSession(
             @PathVariable String userId,
@@ -90,6 +111,7 @@ public class UserController {
                     .body(Map.of("message", "User or Session not found"));
         }
     }
+
     @DeleteMapping("{userId}/session/{sessionId}")
     public ResponseEntity<Map<String, String>> deleteUserSession(
             @PathVariable String userId,
@@ -104,5 +126,4 @@ public class UserController {
                     .body(Map.of("message", "User or Session not found"));
         }
     }
-
 }

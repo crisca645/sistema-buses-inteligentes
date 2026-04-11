@@ -8,17 +8,31 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+
     @Autowired
     private SecurityInterceptor securityInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-
-
         registry.addInterceptor(securityInterceptor)
-                .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/public/**");
-
-
+                .addPathPatterns("/**")
+                .excludePathPatterns(
+                        "/security/login",
+                        "/security/forgot-password",
+                        "/security/reset-password",
+                        "/security/google/callback",
+                        "/security/2fa/verify",
+                        "/security/2fa/resend",
+                        "/security/2fa/cancel",
+                        "/users/register",
+                        "/error",
+                        "/permissions",
+                        "/permissions/**",
+                        "/roles",
+                        "/roles/**",
+                        "/role-permission/**",
+                        "/user-role/**",
+                        "/api/public/**"
+                );
     }
 }

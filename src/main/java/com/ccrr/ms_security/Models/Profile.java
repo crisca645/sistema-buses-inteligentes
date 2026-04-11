@@ -1,5 +1,6 @@
 package com.ccrr.ms_security.Models;
 
+
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
@@ -8,19 +9,17 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Data
 @Document
 public class Profile {
+
     @Id
     private String id;
-    private String nombre;
-    private String phone;  // <-- minúscula
+    private String phone;
+    private String photo;
 
     @DBRef
-    private User user;   //esto significa que esta entidad profile tene una relacion de 1 con user
+    private User user;
 
-    public Profile() {
-    }
-
-    public Profile(String nombre, String phone) {
-        this.nombre = nombre;
-        this.phone = phone;  // <-- minúscula
+    public Profile(String photo, String phone) {
+        this.photo = photo;
+        this.phone = phone;
     }
 }

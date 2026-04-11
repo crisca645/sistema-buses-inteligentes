@@ -7,15 +7,14 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Data
 @Document
 public class User {
-    //decodadores
     @Id
-    private  String id;
-    private  String name;
-    private  String email;
-    private  String password;
+    private String id;
+    private String name;
+    private String lastname;
+    private String email;
+    private String password;
 
-    //campos nuevos para el oggin con google
-
+    // OAuth fields
     private String authProvider;
     private String providerId;
     private String picture;
@@ -25,7 +24,6 @@ public class User {
     private String address;
     private String phone;
 
-
     public User() {
     }
 
@@ -34,6 +32,4 @@ public class User {
         this.email = email;
         this.name = name;
     }
-
-
 }

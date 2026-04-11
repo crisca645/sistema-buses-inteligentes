@@ -4,22 +4,17 @@ import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
+import java.util.Date;
 
 @Data
 @Document
-public class RolePermission {
-
+public class PasswordResetToken {
     @Id
     private String id;
+    private String token;
+    private Date expiration;
+    private boolean used;
 
     @DBRef
-    private Role role;
-
-    @DBRef
-    private Permission permission;
-
-    public RolePermission(Role role, Permission permission) {
-        this.role = role;
-        this.permission = permission;
-    }
+    private User user;
 }

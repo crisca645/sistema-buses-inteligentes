@@ -1,24 +1,20 @@
 package com.ccrr.ms_security.Controllers;
 
-import com.ccrr.ms_security.DTOs.*;
+import com.ccrr.ms_security.Models.LoginRequest;
 import com.ccrr.ms_security.Models.User;
-import com.ccrr.ms_security.Repositories.UserRepository;
-import com.ccrr.ms_security.Services.GoogleAuthService;
-import com.ccrr.ms_security.Services.JwtService;
+import com.ccrr.ms_security.Services.PasswordResetService;
 import com.ccrr.ms_security.Services.SecurityService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
-import com.ccrr.ms_security.Services.GithubAuthService;
-import com.ccrr.ms_security.Services.MicrosoftAuthService;
-import com.ccrr.ms_security.Services.GithubTokenVerifierService;
-import com.ccrr.ms_security.Services.GoogleTokenVerifierService;
-import com.ccrr.ms_security.Services.MicrosoftTokenVerifierService;
-import com.ccrr.ms_security.DTOs.LoginRequest;
-import com.ccrr.ms_security.Services.RecaptchaService;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 
 @CrossOrigin
 @RestController
@@ -29,266 +25,113 @@ public class SecurityController {
     private SecurityService theSecurityService;
 
     @Autowired
-    private GoogleAuthService googleAuthService;
-
-    @Autowired
-    private GithubAuthService githubAuthService;
-
-    @Autowired
-    private MicrosoftAuthService microsoftAuthService;
-
-    @Autowired
-    private JwtService jwtService;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private GithubTokenVerifierService githubTokenVerifierService;
-
-    @Autowired
-    private GoogleTokenVerifierService googleTokenVerifierService;
-
-    @Autowired
-    private MicrosoftTokenVerifierService microsoftTokenVerifierService;
-
-    @Autowired
-    private RecaptchaService recaptchaService;
+    private PasswordResetService thePasswordResetService;
 
     @PostMapping("login")
-    public HashMap<String, Object> login(@RequestBody LoginRequest request,
+    public HashMap<String, Object> login(@RequestBody LoginRequest loginRequest,
                                          final HttpServletResponse response) throws IOException {
-        HashMap<String, Object> theResponse = new HashMap<>();
-
-        // Validar reCAPTCHA
-        if (!recaptchaService.validateToken(request.getRecaptchaToken())) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Verificación reCAPTCHA fallida");
-            return theResponse;
+        HashMap<String, Object> theResponse = this.theSecurityService.loginWith2FA(loginRequest);
+        if (theResponse == null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            HashMap<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Email o contraseña incorrectos");
+            return errorResponse;
         }
-
-        User theNewUser = new User();
-        theNewUser.setEmail(request.getEmail());
-        theNewUser.setPassword(request.getPassword());
-
-        String token = this.theSecurityService.login(theNewUser);
-
-        if (token != null) {
-            theResponse.put("token", token);
-        } else {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-            return theResponse;
-        }
-
         return theResponse;
     }
 
-    @PostMapping("google")
-    public HashMap<String, Object> googleLogin(@RequestBody GoogleLoginRequest request,
-                                               final HttpServletResponse response) throws IOException {
+    @PostMapping("2fa/verify")
+    public ResponseEntity<HashMap<String, Object>> verify2FA(@RequestBody HashMap<String, String> body) {
+        String sessionId = body.get("sessionId");
+        String code = body.get("code");
 
-        AuthResponse authResponse = googleAuthService.loginWithGoogle(request.getCredential());
-
-        if (authResponse == null) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token de Google inválido");
-            return new HashMap<>();
+        HashMap<String, Object> result = this.theSecurityService.verify2FA(sessionId, code);
+        if (result == null) {
+            HashMap<String, Object> error = new HashMap<>();
+            error.put("message", "Sesión o código inválido");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
         }
 
-        HashMap<String, Object> userResponse = new HashMap<>();
-        userResponse.put("id", authResponse.getUser().getId());
-        userResponse.put("name", authResponse.getUser().getName());
-        userResponse.put("email", authResponse.getUser().getEmail());
-        userResponse.put("authProvider", authResponse.getUser().getAuthProvider());
-        userResponse.put("providerId", authResponse.getUser().getProviderId());
-        userResponse.put("picture", authResponse.getUser().getPicture());
-        userResponse.put("emailVerified", authResponse.getUser().getEmailVerified());
-        userResponse.put("active", authResponse.getUser().getActive());
+        Boolean authenticated = (Boolean) result.get("authenticated");
+        if (Boolean.TRUE.equals(authenticated)) {
+            return ResponseEntity.ok(result);
+        }
 
-        HashMap<String, Object> theResponse = new HashMap<>();
-        theResponse.put("token", authResponse.getToken());
-        theResponse.put("user", userResponse);
-        theResponse.put("isNewUser", authResponse.isNewUser());
-        theResponse.put("requiresAdditionalInfo", authResponse.isRequiresAdditionalInfo());
-
-        return theResponse;
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(result);
     }
 
-    @PostMapping("github")
-    public HashMap<String, Object> githubLogin(@RequestBody GithubLoginRequest request,
-                                               final HttpServletResponse response) throws IOException {
-
-        AuthResponse authResponse = githubAuthService.loginWithGithub(request.getAccessToken());
-
-        if (authResponse == null) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token GitHub inválido");
-            return new HashMap<>();
+    @PostMapping("2fa/resend")
+    public ResponseEntity<HashMap<String, Object>> resend2FA(@RequestBody HashMap<String, String> body) {
+        String sessionId = body.get("sessionId");
+        HashMap<String, Object> result = this.theSecurityService.resend2FA(sessionId);
+        if (result == null) {
+            HashMap<String, Object> error = new HashMap<>();
+            error.put("message", "No se pudo reenviar el código");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
         }
-
-        HashMap<String, Object> res = new HashMap<>();
-        res.put("token", authResponse.getToken());
-        res.put("user", authResponse.getUser());
-        res.put("isNewUser", authResponse.isNewUser());
-
-        return res;
+        return ResponseEntity.ok(result);
     }
 
-    @PostMapping("microsoft")
-    public HashMap<String, Object> microsoftLogin(@RequestBody MicrosoftLoginRequest request,
-                                                  final HttpServletResponse response) throws IOException {
-
-        AuthResponse authResponse = microsoftAuthService.loginWithMicrosoft(request.getIdToken());
-
-        if (authResponse == null) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token Microsoft inválido");
-            return new HashMap<>();
+    @PostMapping("2fa/cancel")
+    public ResponseEntity<HashMap<String, Object>> cancel2FA(@RequestBody HashMap<String, String> body) {
+        String sessionId = body.get("sessionId");
+        HashMap<String, Object> result = this.theSecurityService.cancel2FA(sessionId);
+        if (result == null) {
+            HashMap<String, Object> error = new HashMap<>();
+            error.put("message", "No se pudo invalidar la sesión parcial");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
         }
-
-        HashMap<String, Object> res = new HashMap<>();
-        res.put("token", authResponse.getToken());
-        res.put("user", authResponse.getUser());
-        res.put("isNewUser", authResponse.isNewUser());
-
-        return res;
+        return ResponseEntity.ok(result);
     }
 
-    @DeleteMapping("unlink/{provider}")
-    public HashMap<String, Object> unlinkProvider(
-            @PathVariable String provider,
-            @RequestHeader("Authorization") String authHeader,
-            final HttpServletResponse response) throws IOException {
-
-        String jwt = authHeader.replace("Bearer ", "");
-        User tokenUser = jwtService.getUserFromToken(jwt);
-
-        if (tokenUser == null) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido");
-            return new HashMap<>();
-        }
-
-        String userId = tokenUser.getId();
-
-        User user = userRepository.findById(userId).orElse(null);
-        if (user == null) {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Usuario no encontrado");
-            return new HashMap<>();
-        }
-
-        user.setAuthProvider(null);
-        user.setProviderId(null);
-        user.setUsername(null);
-        userRepository.save(user);
-
-        HashMap<String, Object> res = new HashMap<>();
-        res.put("message", "Cuenta " + provider.toUpperCase() + " desvinculada correctamente");
-        res.put("userId", userId);
-
-        return res;
+    @PostMapping("forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String message = this.thePasswordResetService.forgotPassword(email);
+        return ResponseEntity.ok(Map.of("message", message));
     }
 
-    @PutMapping("complete-profile")
-    public HashMap<String, Object> completeProfile(
-            @RequestBody CompleteProfileRequest request,
-            @RequestHeader("Authorization") String authHeader,
-            final HttpServletResponse response) throws IOException {
-
-        String jwt = authHeader.replace("Bearer ", "");
-        User tokenUser = jwtService.getUserFromToken(jwt);
-
-        if (tokenUser == null) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido");
-            return new HashMap<>();
+    @PostMapping("reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> body) {
+        try {
+            String token = body.get("token");
+            String newPassword = body.get("newPassword");
+            String confirmPassword = body.get("confirmPassword");
+            String message = this.thePasswordResetService.resetPassword(token, newPassword, confirmPassword);
+            return ResponseEntity.ok(Map.of("message", message));
+        } catch (RuntimeException e) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
         }
-
-        User user = userRepository.findById(tokenUser.getId()).orElse(null);
-        if (user == null) {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Usuario no encontrado");
-            return new HashMap<>();
-        }
-
-        if (request.getName() != null && !request.getName().isBlank()) {
-            user.setName(request.getName());
-        }
-        if (request.getAddress() != null && !request.getAddress().isBlank()) {
-            user.setAddress(request.getAddress());
-        }
-        if (request.getPhone() != null && !request.getPhone().isBlank()) {
-            user.setPhone(request.getPhone());
-        }
-
-        userRepository.save(user);
-
-        HashMap<String, Object> res = new HashMap<>();
-        res.put("message", "Perfil completado correctamente");
-        res.put("user", user);
-        return res;
     }
 
-    @PostMapping("link/{provider}")
-    public HashMap<String, Object> linkProvider(
-            @PathVariable String provider,
-            @RequestBody LinkProviderRequest request,
-            @RequestHeader("Authorization") String authHeader,
-            final HttpServletResponse response) throws IOException {
+    @GetMapping("google/callback")
+    public ResponseEntity<?> googleCallback(@AuthenticationPrincipal OAuth2User oauthUser) {
+        try {
+            String email = oauthUser.getAttribute("email");
+            String name = oauthUser.getAttribute("given_name");
+            String lastname = oauthUser.getAttribute("family_name");
 
-        String jwt = authHeader.replace("Bearer ", "");
-        User tokenUser = jwtService.getUserFromToken(jwt);
-
-        if (tokenUser == null) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido");
-            return new HashMap<>();
-        }
-
-        User user = userRepository.findById(tokenUser.getId()).orElse(null);
-        if (user == null) {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Usuario no encontrado");
-            return new HashMap<>();
-        }
-
-        switch (provider.toUpperCase()) {
-
-            case "GITHUB" -> {
-                GithubUserDto githubUser = githubTokenVerifierService.verify(request.getAccessToken());
-                if (githubUser == null) {
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token GitHub inválido");
-                    return new HashMap<>();
-                }
-                user.setAuthProvider("GITHUB");
-                user.setProviderId(githubUser.getId());
-                user.setUsername(githubUser.getLogin());
-                if (user.getPicture() == null) user.setPicture(githubUser.getAvatarUrl());
+            if (email == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "No se pudo obtener el email del proveedor. Asegúrate de tener un email público."));
             }
 
-            case "GOOGLE" -> {
-                GoogleUserDto googleUser = googleTokenVerifierService.verify(request.getIdToken());
-                if (googleUser == null) {
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token Google inválido");
-                    return new HashMap<>();
-                }
-                user.setAuthProvider("GOOGLE");
-                user.setProviderId(googleUser.getSub());
-                if (user.getPicture() == null) user.setPicture(googleUser.getPicture());
+            User existingUser = theSecurityService.findOrCreateGoogleUser(email, name, lastname);
+            if (existingUser == null) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("message", "No se pudo crear o encontrar el usuario."));
             }
 
-            case "MICROSOFT" -> {
-                MicrosoftUserDto microsoftUser = microsoftTokenVerifierService.verify(request.getIdToken());
-                if (microsoftUser == null) {
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token Microsoft inválido");
-                    return new HashMap<>();
-                }
-                user.setAuthProvider("MICROSOFT");
-                user.setProviderId(microsoftUser.getSub());
-            }
-
-            default -> {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Proveedor no soportado");
-                return new HashMap<>();
-            }
+            String token = theSecurityService.generateTokenForUser(existingUser);
+            return ResponseEntity.ok(Map.of(
+                    "token", token,
+                    "message", "Inicio de sesión exitoso"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", e.getMessage()));
         }
-
-        userRepository.save(user);
-
-        HashMap<String, Object> res = new HashMap<>();
-        res.put("message", "Cuenta " + provider.toUpperCase() + " vinculada correctamente");
-        res.put("user", user);
-        return res;
     }
 }

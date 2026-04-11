@@ -19,12 +19,26 @@ public class MicrosoftAuthService {
     @Autowired
     private JwtService jwtService;
 
-    public AuthResponse loginWithMicrosoft(String idToken) {
+    @Autowired
+    private MicrosoftGraphService microsoftGraphService;
+
+    public AuthResponse loginWithMicrosoft(String idToken, String accessToken) {
 
         MicrosoftUserDto microsoftUser = microsoftTokenVerifierService.verify(idToken);
 
         if (microsoftUser == null) {
             return null;
+        }
+
+        // Obtener foto de perfil si se proporcionó accessToken
+        if (accessToken != null && !accessToken.isBlank()) {
+            try {
+                String picture = microsoftGraphService.getProfilePicture(accessToken);
+                microsoftUser.setPicture(picture);
+            } catch (Exception e) {
+                // Ignorar errores de la foto para no romper el flujo de login
+                microsoftUser.setPicture(null);
+            }
         }
 
         User user = userRepository
@@ -43,12 +57,18 @@ public class MicrosoftAuthService {
             user.setPassword("");
             user.setAuthProvider("MICROSOFT");
             user.setProviderId(microsoftUser.getSub());
-            user.setPicture(null);
+            user.setPicture(microsoftUser.getPicture());
             user.setEmailVerified(true);
             user.setActive(true);
 
             user = userRepository.save(user);
             isNewUser = true;
+        } else {
+            // Si el usuario ya existía y no tenía foto, actualizarla
+            if (user.getPicture() == null && microsoftUser.getPicture() != null) {
+                user.setPicture(microsoftUser.getPicture());
+                user = userRepository.save(user);
+            }
         }
 
         String token = jwtService.generateToken(user);

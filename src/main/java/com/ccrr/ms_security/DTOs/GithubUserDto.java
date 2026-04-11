@@ -10,4 +10,5 @@ public class GithubUserDto {
     private String email;
     private String avatarUrl;
     private Boolean emailVerified;
+    private Boolean emailRequired;
 }

@@ -12,8 +12,7 @@ public class Role {
     private String name;
     private String description;
 
-    public Role(){
-
+    public Role() {
     }
 
     public Role(String name, String description) {
@@ -21,4 +20,3 @@ public class Role {
         this.description = description;
     }
 }
-

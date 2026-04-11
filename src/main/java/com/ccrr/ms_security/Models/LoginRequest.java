@@ -1,4 +1,4 @@
-package com.ccrr.ms_security.DTOs;
+package com.ccrr.ms_security.Models;
 
 import lombok.Data;
 
@@ -6,5 +6,4 @@ import lombok.Data;
 public class LoginRequest {
     private String email;
     private String password;
-    private String recaptchaToken;
 }

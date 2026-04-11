@@ -1,12 +1,13 @@
 package com.ccrr.ms_security.Models;
 
+
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Data
 @Document
-public class  Permission {
+public class Permission {
     @Id
     private String id;
     private String url;
@@ -15,12 +16,10 @@ public class  Permission {
 
     public Permission(){
 
-    }
-
+}
     public Permission(String url, String method, String model) {
         this.url = url;
         this.method = method;
         this.model = model;
     }
 }
-

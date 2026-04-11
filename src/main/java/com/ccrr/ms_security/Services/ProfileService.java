@@ -1,5 +1,6 @@
 package com.ccrr.ms_security.Services;
 
+
 import com.ccrr.ms_security.Models.Profile;
 import com.ccrr.ms_security.Repositories.ProfileRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,7 @@ public class ProfileService {
 
         if(actualProfile != null){
             actualProfile.setPhone(newProfile.getPhone());
+            actualProfile.setPhoto(newProfile.getPhoto());
             this.theProfileRepository.save(actualProfile);
             return actualProfile;
         } else {
@@ -43,7 +45,5 @@ public class ProfileService {
             this.theProfileRepository.delete(theProfile);
         }
     }
+
 }
-
-
-

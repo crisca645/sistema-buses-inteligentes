@@ -8,6 +8,7 @@ public class AuthResponse {
     private User user;
     private boolean isNewUser;
     private boolean requiresAdditionalInfo;
+    private boolean emailRequired;
 
     public AuthResponse() {
     }
@@ -42,5 +43,13 @@ public class AuthResponse {
 
     public void setRequiresAdditionalInfo(boolean requiresAdditionalInfo) {
         this.requiresAdditionalInfo = requiresAdditionalInfo;
+    }
+
+    public boolean isEmailRequired() {
+        return emailRequired;
+    }
+
+    public void setEmailRequired(boolean emailRequired) {
+        this.emailRequired = emailRequired;
     }
 }
