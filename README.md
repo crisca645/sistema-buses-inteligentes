@@ -19,3 +19,5 @@ Proyecto universitario para la asignatura Desarrollo Backend.
 - Entrega 1: módulo de seguridad
 - Entrega 2: módulo de negocio
 - Entrega 3: monitoreo y comunicación
+
+PRUEBA_UNICA_123456
