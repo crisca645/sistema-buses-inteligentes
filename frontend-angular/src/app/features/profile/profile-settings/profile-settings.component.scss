@@ -1,0 +1,20 @@
+.title {
+  margin: 0 0 16px;
+}
+
+.block {
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.muted {
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}

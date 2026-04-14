@@ -1,0 +1,21 @@
+.hint {
+  opacity: 0.8;
+  margin-bottom: 12px;
+}
+
+.table {
+  width: 100%;
+}
+
+.spacer {
+  flex: 1;
+}
+
+mat-toolbar {
+  gap: 8px;
+}
+
+.empty {
+  padding: 16px;
+  opacity: 0.75;
+}

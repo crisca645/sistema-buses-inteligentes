@@ -1,0 +1,164 @@
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(145deg, #0d47a1 0%, #42a5f5 45%, #e3f2fd 100%);
+}
+
+.auth-card {
+  width: min(520px, 100%);
+  padding: 8px 8px 16px;
+}
+
+.auth-header {
+  text-align: center;
+  padding: 16px 12px 8px;
+}
+
+.logo {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  color: #1565c0;
+}
+
+h1 {
+  margin: 8px 0 4px;
+  font-size: 1.5rem;
+}
+
+.subtitle {
+  margin: 0;
+  opacity: 0.75;
+  font-size: 0.95rem;
+}
+
+.warn {
+  background: #fff3e0;
+  color: #5d4037;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 0;
+}
+
+.full {
+  width: 100%;
+}
+
+.links {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px 0;
+  font-size: 0.9rem;
+}
+
+.divider {
+  margin: 16px 0;
+}
+
+.oauth-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 1rem;
+}
+
+.oauth {
+  margin: 0 12px;
+  padding: 14px;
+  border: 1px solid #e3e8f2;
+  border-radius: 12px;
+  background: #fafcff;
+}
+
+.oauth-subtitle {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: #5f6b7a;
+}
+
+.oauth-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.oauth-btn {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 10px;
+  border: 1px solid #d5dbe5;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 0 14px;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  font: inherit;
+  text-align: left;
+}
+
+.oauth-btn:hover {
+  box-shadow: 0 4px 12px rgba(21, 101, 192, 0.12);
+  border-color: #b8c7db;
+  transform: translateY(-1px);
+}
+
+.oauth-btn:focus-visible {
+  outline: 2px solid #1a73e8;
+  outline-offset: 2px;
+}
+
+.oauth-logo {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.oauth-logo svg {
+  width: 20px;
+  height: 20px;
+}
+
+.oauth-text {
+  font-weight: 500;
+  color: #1f2a37;
+}
+
+.oauth-btn-google {
+  border-color: #dadce0;
+}
+
+.oauth-btn-microsoft {
+  border-color: #cfd8e3;
+}
+
+.oauth-btn-github {
+  border-color: #c9d1d9;
+  color: #111827;
+}
+
+.hint {
+  font-size: 0.85rem;
+  opacity: 0.85;
+  margin-top: 12px;
+}
+
+mat-expansion-panel {
+  margin: 12px;
+}

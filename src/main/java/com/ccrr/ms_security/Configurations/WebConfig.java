@@ -20,6 +20,9 @@ public class WebConfig implements WebMvcConfigurer {
                         "/security/login",
                         "/security/forgot-password",
                         "/security/reset-password",
+                        "/security/complete-profile",
+                        "/security/set-password",
+                        "/security/unlink/google",
                         "/security/google/callback",
                         "/security/2fa/verify",
                         "/security/2fa/resend",
@@ -32,7 +35,12 @@ public class WebConfig implements WebMvcConfigurer {
                         "/roles/**",
                         "/role-permission/**",
                         "/user-role/**",
-                        "/api/public/**"
+                        "/oauth2/**",
+                        "/login/**",
+                        "/api/public/**",
+                        "/security/github/complete-email",
+                        "/security/github/register-alternate-email",
+                        "/security/unlink/github"
                 );
     }
 }

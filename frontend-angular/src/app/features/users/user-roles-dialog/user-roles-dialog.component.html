@@ -1,0 +1,45 @@
+<h2 mat-dialog-title>Roles · {{ data.user.name }} ({{ data.user.email }})</h2>
+<div mat-dialog-content class="content">
+  <h3>Roles actuales</h3>
+  <mat-list>
+    @for (c of current; track c.userRoleId) {
+      <mat-list-item>
+        <span matListItemTitle>{{ c.roleName }}</span>
+        <span matListItemLine>{{ c.roleDescription }}</span>
+        <button
+          mat-stroked-button
+          matListItemMeta
+          type="button"
+          color="warn"
+          (click)="remove(c.userRoleId)"
+        >
+          Quitar
+        </button>
+      </mat-list-item>
+    } @empty {
+      <p class="muted">Sin roles asignados.</p>
+    }
+  </mat-list>
+
+  <mat-divider />
+
+  <h3>Disponibles para asignar</h3>
+  <mat-list>
+    @for (a of available; track a.id) {
+      @if (!a.assigned) {
+        <mat-list-item>
+          <span matListItemTitle>{{ a.name }}</span>
+          <span matListItemLine>{{ a.description }}</span>
+          <button mat-flat-button matListItemMeta type="button" color="primary" (click)="assign(a.id)">
+            Asignar
+          </button>
+        </mat-list-item>
+      }
+    } @empty {
+      <p class="muted">No hay roles disponibles o ya están todos asignados.</p>
+    }
+  </mat-list>
+</div>
+<div mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="close()">Cerrar</button>
+</div>

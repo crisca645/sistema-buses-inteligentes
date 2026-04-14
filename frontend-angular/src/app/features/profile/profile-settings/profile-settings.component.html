@@ -1,0 +1,42 @@
+<h1 class="title">Perfil y seguridad</h1>
+
+<mat-card class="block">
+  <h2>Sesión JWT</h2>
+  <mat-divider />
+  <mat-list>
+    <mat-list-item>
+      <span matListItemTitle>Correo</span>
+      <span matListItemLine>{{ payload()?.email }}</span>
+    </mat-list-item>
+    <mat-list-item>
+      <span matListItemTitle>Nombre</span>
+      <span matListItemLine>{{ payload()?.name }}</span>
+    </mat-list-item>
+    @if (payload()?.username) {
+      <mat-list-item>
+        <span matListItemTitle>Usuario GitHub</span>
+        <span matListItemLine>&#64;{{ payload()?.username }}</span>
+      </mat-list-item>
+    }
+    <mat-list-item>
+      <span matListItemTitle>Roles (claim)</span>
+      <span matListItemLine>{{ roles().join(', ') || 'USER' }}</span>
+    </mat-list-item>
+  </mat-list>
+</mat-card>
+
+<mat-card class="block">
+  <h2>Proveedores OAuth</h2>
+  <p class="muted">
+    El backend solo permite desvincular si la cuenta tiene contraseña local. Los errores del servidor se muestran en
+    notificación.
+  </p>
+  <div class="row">
+    <button mat-stroked-button color="primary" type="button" (click)="unlinkGoogle()" [disabled]="busy">
+      Desvincular Google
+    </button>
+    <button mat-stroked-button color="primary" type="button" (click)="unlinkGithub()" [disabled]="busy">
+      Desvincular GitHub
+    </button>
+  </div>
+</mat-card>

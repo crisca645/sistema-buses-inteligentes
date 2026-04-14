@@ -1,0 +1,57 @@
+<mat-sidenav-container class="shell" [hasBackdrop]="isHandset()">
+  <mat-sidenav
+    #drawer
+    [mode]="isHandset() ? 'over' : 'side'"
+    [opened]="isHandset() ? sidenavOpen : true"
+    class="sidenav"
+  >
+    <div class="brand">
+      <mat-icon class="brand-icon">directions_bus</mat-icon>
+      <div>
+        <div class="brand-title">Buses Inteligentes</div>
+        <div class="brand-sub">Seguridad</div>
+      </div>
+    </div>
+    <mat-divider />
+    <mat-nav-list>
+      <a mat-list-item routerLink="/dashboard" routerLinkActive="active">
+        <mat-icon matListItemIcon>dashboard</mat-icon>
+        <span matListItemTitle>Dashboard</span>
+      </a>
+      <a mat-list-item routerLink="/roles" routerLinkActive="active">
+        <mat-icon matListItemIcon>badge</mat-icon>
+        <span matListItemTitle>Roles</span>
+      </a>
+      <a mat-list-item routerLink="/role-permissions" routerLinkActive="active">
+        <mat-icon matListItemIcon>rule</mat-icon>
+        <span matListItemTitle>Permisos por rol</span>
+      </a>
+      <a mat-list-item routerLink="/users" routerLinkActive="active">
+        <mat-icon matListItemIcon>group</mat-icon>
+        <span matListItemTitle>Usuarios y roles</span>
+      </a>
+      <a mat-list-item routerLink="/profile" routerLinkActive="active">
+        <mat-icon matListItemIcon>person</mat-icon>
+        <span matListItemTitle>Perfil</span>
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar color="primary" class="toolbar">
+      @if (isHandset()) {
+        <button mat-icon-button type="button" aria-label="Menú" (click)="toggleSidenav(); drawer.toggle()">
+          <mat-icon>menu</mat-icon>
+        </button>
+      }
+      <span class="toolbar-spacer"></span>
+      <span class="user-chip">{{ userLabel() }}</span>
+      <button mat-icon-button type="button" aria-label="Cerrar sesión" (click)="logout()">
+        <mat-icon>logout</mat-icon>
+      </button>
+    </mat-toolbar>
+    <main class="content mat-typography">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

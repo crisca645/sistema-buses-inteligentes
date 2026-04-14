@@ -1,0 +1,48 @@
+<div class="auth-page">
+  <mat-card class="auth-card mat-elevation-z4">
+    <div class="auth-header">
+      <h1>Crear cuenta</h1>
+      <p class="subtitle">Registro de usuario local</p>
+    </div>
+
+    @if (!recaptchaConfigured) {
+      <p class="warn">Configura <code>recaptchaSiteKey</code> en environment.ts</p>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+      <div class="row">
+        <mat-form-field appearance="outline" class="half">
+          <mat-label>Nombre</mat-label>
+          <input matInput formControlName="name" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="half">
+          <mat-label>Apellido</mat-label>
+          <input matInput formControlName="lastname" />
+        </mat-form-field>
+      </div>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Correo</mat-label>
+        <input matInput type="email" formControlName="email" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Contraseña</mat-label>
+        <input matInput type="password" formControlName="password" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Confirmar contraseña</mat-label>
+        <input matInput type="password" formControlName="confirmPassword" />
+        @if (form.errors?.['mismatch'] && form.touched) {
+          <mat-error>Las contraseñas no coinciden</mat-error>
+        }
+      </mat-form-field>
+
+      <button mat-flat-button color="primary" class="full" type="submit" [disabled]="submitting">
+        Registrarme
+      </button>
+    </form>
+
+    <div class="links">
+      <a routerLink="/login">¿Ya tienes cuenta? Inicia sesión</a>
+    </div>
+  </mat-card>
+</div>
