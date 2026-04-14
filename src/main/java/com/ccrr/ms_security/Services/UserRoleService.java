@@ -121,10 +121,12 @@ public class UserRoleService {
 
         if (StringUtils.hasText(search)) {
             String normalizedSearch = search.trim();
-            users = this.theUserRepository.findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-                    normalizedSearch,
-                    normalizedSearch
-            );
+            users = this.theUserRepository
+                    .findByNameContainingIgnoreCaseOrLastnameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                            normalizedSearch,
+                            normalizedSearch,
+                            normalizedSearch
+                    );
         } else {
             users = this.theUserRepository.findAll();
         }
@@ -134,6 +136,7 @@ public class UserRoleService {
             response.add(new UserWithRolesResponse(
                     user.getId(),
                     user.getName(),
+                    user.getLastname(),
                     user.getEmail(),
                     this.getCurrentRolesByUser(user.getId())
             ));

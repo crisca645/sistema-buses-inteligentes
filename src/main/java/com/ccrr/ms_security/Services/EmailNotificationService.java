@@ -2,6 +2,8 @@ package com.ccrr.ms_security.Services;
 
 import com.ccrr.ms_security.Models.Role;
 import com.ccrr.ms_security.Models.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -15,10 +17,15 @@ import java.util.stream.Collectors;
 @Service
 public class EmailNotificationService {
 
+    private static final Logger log = LoggerFactory.getLogger(EmailNotificationService.class);
+
     private final JavaMailSender mailSender;
 
     @Value("${app.mail.from:}")
     private String fromEmail;
+
+    @Value("${app.role-change.relax-when-mail-unavailable:false}")
+    private boolean relaxWhenMailUnavailable;
 
     public EmailNotificationService(ObjectProvider<JavaMailSender> mailSenderProvider) {
         this.mailSender = mailSenderProvider.getIfAvailable();
@@ -30,6 +37,14 @@ public class EmailNotificationService {
         }
 
         if (this.mailSender == null || !StringUtils.hasText(this.fromEmail)) {
+            if (this.relaxWhenMailUnavailable) {
+                log.warn(
+                        "[HU-002] Correo no configurado; se omite envío pero se considera notificación satisfecha para {}",
+                        user.getEmail());
+                return true;
+            }
+            log.warn(
+                    "[HU-002] No se puede enviar correo (JavaMailSender o app.mail.from ausente). Configure SMTP o app.role-change.relax-when-mail-unavailable=true solo en desarrollo.");
             return false;
         }
 
@@ -60,6 +75,7 @@ public class EmailNotificationService {
             this.mailSender.send(message);
             return true;
         } catch (Exception ex) {
+            log.warn("[HU-002] Fallo al enviar notificación de cambio de roles a {}: {}", user.getEmail(), ex.getMessage());
             return false;
         }
     }

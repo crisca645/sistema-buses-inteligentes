@@ -111,6 +111,7 @@ public class PermissionService {
         this.createPermissionIfMissing("/incidents/?", "PUT", "Incident");
         this.createPermissionIfMissing("/incidents/?", "DELETE", "Incident");
 
+        this.createPermissionIfMissing("/mass-messages", "GET", "MassMessage");
         this.createPermissionIfMissing("/mass-messages", "POST", "MassMessage");
     }
 

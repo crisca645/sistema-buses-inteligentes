@@ -1,7 +1,9 @@
 package com.ccrr.ms_security.Services;
 
 import com.ccrr.ms_security.Models.Role;
+import com.ccrr.ms_security.Models.RolePermission;
 import com.ccrr.ms_security.Models.UserRole;
+import com.ccrr.ms_security.Repositories.RolePermissionRepository;
 import com.ccrr.ms_security.Repositories.RoleRepository;
 import com.ccrr.ms_security.Repositories.UserRoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,9 @@ public class RoleService {
     @Autowired
     private UserRoleRepository theUserRoleRepository;
 
+    @Autowired
+    private RolePermissionRepository theRolePermissionRepository;
+
     public List<Role> find() {
         return this.theRoleRepository.findAll();
     }
@@ -43,6 +48,7 @@ public class RoleService {
         this.validateRequiredFieldsAndMinLength(newRole);
         newRole.setName(this.normalizeText(newRole.getName()));
         newRole.setDescription(this.normalizeText(newRole.getDescription()));
+        this.assertNameUniqueAmongRoles(newRole.getName(), null);
         return this.theRoleRepository.save(newRole);
     }
 
@@ -55,6 +61,7 @@ public class RoleService {
         this.validateRequiredFieldsAndMinLength(newRole);
         actualRole.setName(this.normalizeText(newRole.getName()));
         actualRole.setDescription(this.normalizeText(newRole.getDescription()));
+        this.assertNameUniqueAmongRoles(actualRole.getName(), id);
         return this.theRoleRepository.save(actualRole);
     }
 
@@ -67,6 +74,11 @@ public class RoleService {
         List<UserRole> assignedUsers = this.theUserRoleRepository.getUsersByRole(id);
         if (assignedUsers != null && !assignedUsers.isEmpty()) {
             return DeleteRoleResult.ROLE_ASSIGNED_TO_USERS;
+        }
+
+        List<RolePermission> rolePermissions = this.theRolePermissionRepository.getPermissionsByRole(id);
+        if (rolePermissions != null && !rolePermissions.isEmpty()) {
+            this.theRolePermissionRepository.deleteAll(rolePermissions);
         }
 
         this.theRoleRepository.delete(theRole);
@@ -131,5 +143,18 @@ public class RoleService {
 
     private String normalizeText(String value) {
         return value == null ? null : value.trim().replaceAll("\\s+", " ");
+    }
+
+    private void assertNameUniqueAmongRoles(String normalizedName, String excludeRoleId) {
+        if (!StringUtils.hasText(normalizedName)) {
+            return;
+        }
+        boolean duplicate = excludeRoleId == null
+                ? this.theRoleRepository.existsByNameIgnoreCase(normalizedName)
+                : this.theRoleRepository.existsByNameIgnoreCaseAndIdNot(normalizedName, excludeRoleId);
+        if (duplicate) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ya existe un rol con este nombre");
+        }
     }
 }

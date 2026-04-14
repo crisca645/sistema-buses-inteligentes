@@ -1,0 +1,44 @@
+<h1>Usuarios y roles</h1>
+<p class="hint">
+  Backend: GET <code>/user-role/users-with-roles</code> (query <code>search</code> opcional), GET
+  <code>/user-role/user/&#123;id&#125;/roles</code>, GET <code>/user-role/user/&#123;id&#125;/available-roles</code>, POST
+  <code>/user-role/user/&#123;userId&#125;/role/&#123;roleId&#125;</code>, DELETE <code>/user-role/&#123;userRoleId&#125;</code>
+</p>
+
+<mat-card class="card">
+  <mat-form-field appearance="outline" class="search">
+    <mat-label>Buscar por nombre, apellido o correo</mat-label>
+    <input matInput [formControl]="search" />
+  </mat-form-field>
+
+  <table mat-table [dataSource]="rows" class="table">
+    <ng-container matColumnDef="name">
+      <th mat-header-cell *matHeaderCellDef>Nombre</th>
+      <td mat-cell *matCellDef="let u">{{ u.name }} {{ u.lastname }}</td>
+    </ng-container>
+    <ng-container matColumnDef="email">
+      <th mat-header-cell *matHeaderCellDef>Correo</th>
+      <td mat-cell *matCellDef="let u">{{ u.email }}</td>
+    </ng-container>
+    <ng-container matColumnDef="roles">
+      <th mat-header-cell *matHeaderCellDef>Roles</th>
+      <td mat-cell *matCellDef="let u">
+        <mat-chip-set>
+          @for (r of u.roles || []; track r.id) {
+            <mat-chip>{{ r.name }}</mat-chip>
+          } @empty {
+            <mat-chip>Sin roles</mat-chip>
+          }
+        </mat-chip-set>
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef></th>
+      <td mat-cell *matCellDef="let u">
+        <button mat-stroked-button color="primary" type="button" (click)="openRoles(u)">Gestionar roles</button>
+      </td>
+    </ng-container>
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+  </table>
+</mat-card>

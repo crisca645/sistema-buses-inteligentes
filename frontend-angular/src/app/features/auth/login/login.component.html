@@ -1,0 +1,119 @@
+<div class="auth-page">
+  <mat-card class="auth-card mat-elevation-z4">
+    <div class="auth-header">
+      <mat-icon class="logo">directions_bus</mat-icon>
+      <h1>Iniciar sesión</h1>
+      <p class="subtitle">Sistema de Buses Inteligentes · Seguridad</p>
+    </div>
+
+    @if (!recaptchaConfigured) {
+      <p class="warn">
+        Falta la clave pública de reCAPTCHA v3 en <code>environment.ts</code> (recaptchaSiteKey). Sin ella el
+        backend rechazará login y registro.
+      </p>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Correo</mat-label>
+        <input matInput type="email" formControlName="email" autocomplete="username" />
+        @if (form.controls.email.touched && form.controls.email.invalid) {
+          <mat-error>Correo inválido</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Contraseña</mat-label>
+        <input matInput type="password" formControlName="password" autocomplete="current-password" />
+        @if (form.controls.password.touched && form.controls.password.invalid) {
+          <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <button mat-flat-button color="primary" class="full" type="submit" [disabled]="submitting">
+        @if (submitting) {
+          Entrando…
+        } @else {
+          Continuar
+        }
+      </button>
+    </form>
+
+    <div class="links">
+      <a routerLink="/register">Crear cuenta</a>
+      <span>·</span>
+      <a routerLink="/forgot-password">¿Olvidaste tu contraseña?</a>
+    </div>
+
+    <mat-divider class="divider" />
+
+    <section class="oauth" aria-label="Inicio de sesión OAuth">
+      <div class="oauth-title">Iniciar sesión con plataformas externas</div>
+      <p class="oauth-subtitle">Redirección segura al backend {{ environment.apiUrl }}</p>
+
+      <div class="oauth-buttons">
+        <button class="oauth-btn oauth-btn-google" type="button" (click)="oauthGoogle()">
+          <span class="oauth-logo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path
+                fill="#EA4335"
+                d="M12 10.2v3.95h5.5c-.24 1.27-.95 2.35-2.02 3.08l3.27 2.53c1.9-1.75 3-4.32 3-7.56 0-.73-.07-1.43-.2-2.1H12z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 22c2.7 0 4.96-.9 6.62-2.44l-3.27-2.53c-.9.6-2.07.96-3.35.96-2.57 0-4.74-1.73-5.51-4.05H3.1v2.64A10 10 0 0 0 12 22z"
+              />
+              <path
+                fill="#4A90E2"
+                d="M6.49 13.94A6 6 0 0 1 6.18 12c0-.67.11-1.31.31-1.94V7.42H3.1A10 10 0 0 0 2 12c0 1.62.39 3.15 1.1 4.58l3.39-2.64z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M12 5.98c1.47 0 2.79.5 3.82 1.48l2.87-2.88A10.05 10.05 0 0 0 12 2a10 10 0 0 0-8.9 5.42l3.39 2.64c.77-2.32 2.94-4.08 5.51-4.08z"
+              />
+            </svg>
+          </span>
+          <span class="oauth-text">Continuar con Google</span>
+        </button>
+
+        <button class="oauth-btn oauth-btn-microsoft" type="button" (click)="oauthMicrosoft()">
+          <span class="oauth-logo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <rect x="2" y="2" width="9" height="9" fill="#F25022" />
+              <rect x="13" y="2" width="9" height="9" fill="#7FBA00" />
+              <rect x="2" y="13" width="9" height="9" fill="#00A4EF" />
+              <rect x="13" y="13" width="9" height="9" fill="#FFB900" />
+            </svg>
+          </span>
+          <span class="oauth-text">Continuar con Microsoft</span>
+        </button>
+
+        <button class="oauth-btn oauth-btn-github" type="button" (click)="oauthGithub()">
+          <span class="oauth-logo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path
+                fill="currentColor"
+                d="M12 .5A12 12 0 0 0 8.2 23.9c.6.1.8-.26.8-.58v-2.03c-3.35.73-4.06-1.62-4.06-1.62-.54-1.39-1.33-1.76-1.33-1.76-1.1-.74.08-.73.08-.73 1.2.08 1.84 1.25 1.84 1.25 1.08 1.86 2.82 1.32 3.5 1 .1-.78.42-1.32.76-1.63-2.67-.3-5.46-1.34-5.46-5.95 0-1.32.47-2.4 1.24-3.25-.13-.3-.54-1.52.12-3.16 0 0 1.01-.32 3.3 1.24a11.48 11.48 0 0 1 6 0c2.29-1.56 3.3-1.24 3.3-1.24.66 1.64.25 2.86.12 3.16.77.85 1.24 1.93 1.24 3.25 0 4.62-2.8 5.64-5.47 5.94.43.37.81 1.1.81 2.23v3.3c0 .32.21.7.82.58A12 12 0 0 0 12 .5z"
+              />
+            </svg>
+          </span>
+          <span class="oauth-text">Continuar con GitHub</span>
+        </button>
+      </div>
+
+      <p class="hint">
+        El flujo OAuth ahora es automático. Este panel manual se mantiene como respaldo para pruebas.
+      </p>
+    </section>
+
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>Pegar respuesta JSON (OAuth / demostración)</mat-panel-title>
+      </mat-expansion-panel-header>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>JSON</mat-label>
+        <textarea matInput rows="6" [(ngModel)]="pasteJson" name="paste" placeholder='{"token":"..."}'></textarea>
+      </mat-form-field>
+      <button mat-button color="primary" type="button" (click)="applyOAuthJson()">Importar y continuar</button>
+    </mat-expansion-panel>
+  </mat-card>
+</div>

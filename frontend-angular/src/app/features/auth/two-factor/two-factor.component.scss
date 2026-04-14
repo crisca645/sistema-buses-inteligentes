@@ -1,0 +1,57 @@
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #e8eaf6;
+}
+
+.auth-card {
+  width: min(440px, 100%);
+  padding: 24px;
+}
+
+.subtitle {
+  opacity: 0.85;
+}
+
+.masked-email {
+  display: inline-block;
+  margin-left: 4px;
+}
+
+.countdown {
+  margin: 12px 0 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.countdown.expired {
+  color: #c62828;
+}
+
+.spam-hint {
+  margin-top: 16px;
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.full {
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}

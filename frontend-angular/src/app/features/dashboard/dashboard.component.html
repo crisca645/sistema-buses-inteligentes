@@ -1,0 +1,47 @@
+<section class="hero mat-elevation-z1">
+  <div>
+    <h1>Hola, {{ user()?.name || user()?.email }}</h1>
+    @if (user()?.username) {
+      <p class="github-handle">GitHub: &#64;{{ user()?.username }}</p>
+    }
+    <p class="lead">
+      Panel del módulo de seguridad del Sistema de Buses Inteligentes. Desde aquí administras roles, permisos y
+      asignaciones de usuarios.
+    </p>
+    <mat-chip-set class="chips" aria-label="Roles en JWT">
+      @for (r of roles(); track r) {
+        <mat-chip>{{ r }}</mat-chip>
+      } @empty {
+        <mat-chip>USER (por defecto)</mat-chip>
+      }
+    </mat-chip-set>
+  </div>
+  <mat-icon class="hero-icon">verified_user</mat-icon>
+</section>
+
+<div class="grid">
+  <mat-card class="tile">
+    <mat-icon>badge</mat-icon>
+    <h2>Roles</h2>
+    <p>CRUD de roles del sistema.</p>
+    <button mat-stroked-button color="primary" routerLink="/roles">Abrir</button>
+  </mat-card>
+  <mat-card class="tile">
+    <mat-icon>rule</mat-icon>
+    <h2>Permisos por rol</h2>
+    <p>Asigna permisos HTTP a cada rol.</p>
+    <button mat-stroked-button color="primary" routerLink="/role-permissions">Abrir</button>
+  </mat-card>
+  <mat-card class="tile">
+    <mat-icon>group</mat-icon>
+    <h2>Usuarios</h2>
+    <p>Visualiza usuarios y gestiona sus roles.</p>
+    <button mat-stroked-button color="primary" routerLink="/users">Abrir</button>
+  </mat-card>
+  <mat-card class="tile">
+    <mat-icon>person</mat-icon>
+    <h2>Perfil</h2>
+    <p>Configuración y desvinculación OAuth.</p>
+    <button mat-stroked-button color="primary" routerLink="/profile">Abrir</button>
+  </mat-card>
+</div>

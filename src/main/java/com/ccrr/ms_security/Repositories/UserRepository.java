@@ -18,6 +18,11 @@ public interface UserRepository extends MongoRepository<User, String> {
 
     List<User> findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(String name, String email);
 
+    List<User> findByNameContainingIgnoreCaseOrLastnameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+            String namePart,
+            String lastnamePart,
+            String emailPart);
+
     //Este es el más importante para OAuth.
     //
     //Ejemplo:

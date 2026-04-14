@@ -50,6 +50,9 @@ public class JwtService {
         claims.put("name", theUser.getName());
         claims.put("email", theUser.getEmail());
         claims.put("role", roleName);
+        if (theUser.getUsername() != null && !theUser.getUsername().isBlank()) {
+            claims.put("username", theUser.getUsername());
+        }
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -91,6 +94,7 @@ public class JwtService {
             user.setId((String) claims.get("id"));
             user.setName((String) claims.get("name"));
             user.setEmail((String) claims.get("email"));
+            user.setUsername((String) claims.get("username"));
             return user;
         } catch (Exception e) {
             return null;

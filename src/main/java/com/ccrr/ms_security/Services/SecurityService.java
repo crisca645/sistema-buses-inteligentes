@@ -6,6 +6,8 @@ import com.ccrr.ms_security.Models.User;
 import com.ccrr.ms_security.Models.UserRole;
 import com.ccrr.ms_security.Repositories.UserRepository;
 import com.ccrr.ms_security.Repositories.UserRoleRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,11 @@ import java.util.stream.Collectors;
 
 @Service
 public class SecurityService {
+
+    private static final Logger log = LoggerFactory.getLogger(SecurityService.class);
+
+    public static final String ERROR_TYPE_INVALID_CREDENTIALS = "INVALID_CREDENTIALS";
+    public static final String ERROR_TYPE_EMAIL_2FA_FAILED = "EMAIL_2FA_FAILED";
 
     @Autowired
     private UserRoleRepository theUserRoleRepository;
@@ -45,47 +52,83 @@ public class SecurityService {
     @Value("${jwt.expiration:3600000}")
     private Long jwtExpirationMs;
 
+    @Value("${app.2fa.dev-log-code-only:false}")
+    private boolean devLogCodeOnly;
+
+    /**
+     * Login con 2FA. Siempre devuelve un mapa con {@code success} (nunca {@code null}).
+     * <ul>
+     *   <li>{@code success=false}, {@code errorType=INVALID_CREDENTIALS}: credenciales inválidas o datos incompletos.</li>
+     *   <li>{@code success=false}, {@code errorType=EMAIL_2FA_FAILED}: sesión 2FA creada pero no se pudo enviar el correo (sesión eliminada).</li>
+     *   <li>{@code success=true}: requiere verificación 2FA; incluye {@code sessionId}, {@code maskedEmail}, {@code expiresAt}, etc.</li>
+     * </ul>
+     */
     public HashMap<String, Object> loginWith2FA(LoginRequest loginRequest) {
         if (loginRequest == null) {
-            return null;
+            return loginFailureResponse(ERROR_TYPE_INVALID_CREDENTIALS, "Email o contraseña incorrectos");
         }
 
         String email = loginRequest.getEmail() != null ? loginRequest.getEmail().trim().toLowerCase() : null;
         String password = loginRequest.getPassword();
 
         if (!StringUtils.hasText(email) || !StringUtils.hasText(password)) {
-            return null;
+            return loginFailureResponse(ERROR_TYPE_INVALID_CREDENTIALS, "Email o contraseña incorrectos");
         }
 
         User theActualUser = this.theUserRepository.getUserByEmail(email);
         if (theActualUser == null || !theActualUser.getPassword().equals(this.theEncryptionService.convertSHA256(password))) {
-            return null;
+            return loginFailureResponse(ERROR_TYPE_INVALID_CREDENTIALS, "Email o contraseña incorrectos");
         }
 
-        String token = this.generateSignedToken(theActualUser);
         String maskedEmail = this.maskEmail(theActualUser.getEmail());
 
         Session session = new Session();
         session.setUser(theActualUser);
-        session.setToken(token);
+        session.setToken(this.generateSignedToken(theActualUser));
         session.setCode2FA(this.generateTwoFactorCode());
         session.setFailedAttempts(0);
         session.setExpiration(new Date(System.currentTimeMillis() + this.twoFactorCodeExpirationMs));
         session = this.theSessionService.create(session);
 
-        boolean emailSent = this.theEmailNotificationService.sendTwoFactorCodeNotification(theActualUser, session.getCode2FA());
+        boolean emailSent;
+        if (this.devLogCodeOnly) {
+            log.warn(
+                    "[2FA modo desarrollo] No se envía correo. usuario={} sessionId={} código={}",
+                    theActualUser.getEmail(),
+                    session.getId(),
+                    session.getCode2FA());
+            emailSent = true;
+        } else {
+            emailSent = this.theEmailNotificationService.sendTwoFactorCodeNotification(theActualUser, session.getCode2FA());
+        }
         if (!emailSent) {
             this.theSessionService.delete(session.getId());
-            return null;
+            return loginFailureResponse(
+                    ERROR_TYPE_EMAIL_2FA_FAILED,
+                    "No se pudo enviar el código de verificación al correo");
         }
 
         HashMap<String, Object> response = new HashMap<>();
+        response.put("success", true);
         response.put("requires2FA", true);
         response.put("sessionId", session.getId());
         response.put("maskedEmail", maskedEmail);
-        response.put("message", "Ingrese el código de 6 dígitos enviado a su email " + maskedEmail);
+        if (this.devLogCodeOnly) {
+            response.put("message", "Modo desarrollo: revisa la consola del servidor para el código 2FA");
+            response.put("dev2faMode", true);
+        } else {
+            response.put("message", "Código de verificación enviado al correo");
+        }
         response.put("expiresAt", session.getExpiration());
         response.put("expiresInSeconds", this.twoFactorCodeExpirationMs / 1000);
+        return response;
+    }
+
+    private static HashMap<String, Object> loginFailureResponse(String errorType, String message) {
+        HashMap<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("errorType", errorType);
+        response.put("message", message);
         return response;
     }
 
@@ -267,8 +310,101 @@ public class SecurityService {
         newUser.setEmail(normalizedEmail);
         newUser.setName(StringUtils.hasText(name) ? name : "Usuario");
         newUser.setLastname(StringUtils.hasText(lastname) ? lastname : "OAuth");
-        newUser.setPassword(theEncryptionService.convertSHA256(UUID.randomUUID().toString()));
+        newUser.setPassword(generateOAuthTechnicalPassword());
+        newUser.setAuthProvider("GOOGLE");
+
         return theUserRepository.save(newUser);
+    }
+
+    /**
+     * Contraseña técnica no usable para login por email (OAuth y cuentas creadas por proveedor).
+     * Misma estrategia para Google, Microsoft y GitHub.
+     */
+    public String generateOAuthTechnicalPassword() {
+        return theEncryptionService.convertSHA256(UUID.randomUUID().toString());
+    }
+
+    public User findOrCreateOAuthUser(String email,
+                                      String name,
+                                      String lastname,
+                                      String authProvider,
+                                      String providerId,
+                                      String picture,
+                                      Boolean emailVerified) {
+        if (!StringUtils.hasText(email)) {
+            return null;
+        }
+
+        String normalizedEmail = email.trim().toLowerCase();
+        User existingUser = theUserRepository.getUserByEmail(normalizedEmail);
+
+        if (existingUser != null) {
+            existingUser.setName(StringUtils.hasText(name) ? name : existingUser.getName());
+            existingUser.setLastname(StringUtils.hasText(lastname) ? lastname : existingUser.getLastname());
+            existingUser.setAuthProvider(authProvider);
+            existingUser.setProviderId(providerId);
+            existingUser.setPicture(picture);
+            existingUser.setEmailVerified(emailVerified);
+            existingUser.setActive(true);
+            return theUserRepository.save(existingUser);
+        }
+
+        User newUser = new User();
+        newUser.setEmail(normalizedEmail);
+        newUser.setName(StringUtils.hasText(name) ? name : "Usuario");
+        newUser.setLastname(StringUtils.hasText(lastname) ? lastname : "OAuth");
+        newUser.setPassword(generateOAuthTechnicalPassword());
+        newUser.setAuthProvider(authProvider);
+        newUser.setProviderId(providerId);
+        newUser.setPicture(picture);
+        newUser.setEmailVerified(emailVerified);
+        newUser.setActive(true);
+
+        return theUserRepository.save(newUser);
+    }
+
+    public boolean isProfileIncomplete(User user) {
+        if (user == null) {
+            return true;
+        }
+        return !StringUtils.hasText(user.getAddress()) || !StringUtils.hasText(user.getPhone());
+    }
+
+    public HashMap<String, Object> createProfileIncompleteResponse(User user) {
+        HashMap<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("requiresCompleteProfile", true);
+        response.put("message", "Debe completar información adicional requerida");
+        response.put("userId", user != null ? user.getId() : null);
+        response.put("email", user != null ? user.getEmail() : null);
+        response.put("name", user != null ? user.getName() : null);
+        response.put("lastname", user != null ? user.getLastname() : null);
+        response.put("authProvider", user != null ? user.getAuthProvider() : null);
+        return response;
+    }
+
+    public HashMap<String, Object> completeProfileAndGenerateToken(String userId, String address, String phone) {
+        if (!StringUtils.hasText(userId) || !StringUtils.hasText(address) || !StringUtils.hasText(phone)) {
+            return null;
+        }
+
+        User user = this.findById(userId.trim());
+        if (user == null) {
+            return null;
+        }
+
+        user.setAddress(address.trim());
+        user.setPhone(phone.trim());
+        user = this.save(user);
+
+        String token = this.generateTokenForUser(user);
+        HashMap<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Perfil completado correctamente");
+        response.put("token", token);
+        response.put("userId", user.getId());
+        response.put("email", user.getEmail());
+        return response;
     }
 
     public String generateTokenForUser(User user) {
@@ -309,17 +445,38 @@ public class SecurityService {
         String localPart = parts[0];
         String domainPart = parts[1];
 
-        String maskedLocal = localPart.length() <= 2
-                ? localPart.substring(0, 1) + "***"
-                : localPart.substring(0, 2) + "***";
+        String maskedLocal;
+        if (localPart.isEmpty()) {
+            maskedLocal = "***";
+        } else if (localPart.length() <= 1) {
+            maskedLocal = localPart.charAt(0) + "***";
+        } else {
+            maskedLocal = localPart.substring(0, 2) + "***";
+        }
 
         int dotIndex = domainPart.lastIndexOf('.');
-        String domainName = dotIndex > 0 ? domainPart.substring(0, dotIndex) : domainPart;
         String domainExtension = dotIndex > 0 ? domainPart.substring(dotIndex) : "";
-        String maskedDomain = domainName.isEmpty()
-                ? "***"
-                : domainName.substring(0, 1) + "***";
 
-        return maskedLocal + "@" + maskedDomain + domainExtension;
+        return maskedLocal + "@***" + domainExtension;
+    }
+
+    public User findById(String id) {
+        return theUserRepository.findById(id).orElse(null);
+    }
+
+    public User save(User user) {
+        return theUserRepository.save(user);
+    }
+
+    public User getUserFromToken(String token) {
+        User tokenUser = theJwtService.getUserFromToken(token);
+        if (tokenUser == null || tokenUser.getId() == null) {
+            return null;
+        }
+        return theUserRepository.findById(tokenUser.getId()).orElse(null);
+    }
+
+    public String encryptPassword(String password) {
+        return theEncryptionService.convertSHA256(password);
     }
 }
