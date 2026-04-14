@@ -6,6 +6,7 @@ import com.ccrr.ms_security.Models.User;
 import com.ccrr.ms_security.Repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 public class GithubAuthService {
@@ -25,47 +26,88 @@ public class GithubAuthService {
 
         if (githubUser == null) return null;
 
-        // CASO ESPECIAL: EMAIL REQUERIDO
+        // CASO 1: GITHUB NO ENTREGA EMAIL
         if (Boolean.TRUE.equals(githubUser.getEmailRequired())) {
-            // Crear usuario temporal sin email, inactivo
             User user = userRepository
                     .getUserByAuthProviderAndProviderId("GITHUB", githubUser.getId());
 
             if (user == null) {
                 user = new User();
                 user.setName(githubUser.getName());
-                user.setEmail(null); // Sin email por ahora
+                user.setEmail(null);
                 user.setPassword("");
                 user.setAuthProvider("GITHUB");
                 user.setProviderId(githubUser.getId());
                 user.setPicture(githubUser.getAvatarUrl());
                 user.setEmailVerified(false);
-                user.setActive(false); // Inactivo hasta que proporcione email
+                user.setActive(false);
                 user.setUsername(githubUser.getLogin());
+                user = userRepository.save(user);
+            } else {
+                user.setName(githubUser.getName());
+                user.setPicture(githubUser.getAvatarUrl());
+                user.setUsername(githubUser.getLogin());
+                user.setEmailVerified(false);
+                user.setActive(false);
                 user = userRepository.save(user);
             }
 
-            // Generar JWT temporal
             String token = jwtService.generateToken(user);
 
             AuthResponse response = new AuthResponse();
             response.setToken(token);
             response.setUser(user);
-            response.setNewUser(true);
+            response.setNewUser(user.getEmail() == null);
             response.setRequiresAdditionalInfo(true);
             response.setEmailRequired(true);
 
             return response;
         }
 
-        // FLUJO NORMAL: HAY EMAIL
         User user = userRepository
                 .getUserByAuthProviderAndProviderId("GITHUB", githubUser.getId());
 
         boolean isNewUser = false;
 
+        // CASO 2: YA EXISTE USUARIO GITHUB PERO TODAVÍA NO TIENE EMAIL COMPLETO
+        if (user != null && (!StringUtils.hasText(user.getEmail()) || !Boolean.TRUE.equals(user.getActive()))) {
+            user.setName(githubUser.getName() != null ? githubUser.getName() : user.getName());
+            user.setPicture(githubUser.getAvatarUrl());
+            user.setUsername(githubUser.getLogin());
+            user.setEmailVerified(false);
+            user.setActive(false);
+            user = userRepository.save(user);
+
+            String token = jwtService.generateToken(user);
+
+            AuthResponse response = new AuthResponse();
+            response.setToken(token);
+            response.setUser(user);
+            response.setNewUser(false);
+            response.setRequiresAdditionalInfo(true);
+            response.setEmailRequired(true);
+
+            return response;
+        }
+
         if (user == null) {
             user = userRepository.getUserByEmail(githubUser.getEmail());
+
+            // SI EXISTE POR EMAIL, SE VINCULA A GITHUB
+            if (user != null) {
+                user.setAuthProvider("GITHUB");
+                user.setProviderId(githubUser.getId());
+                user.setPicture(githubUser.getAvatarUrl());
+                user.setUsername(githubUser.getLogin());
+                user.setEmailVerified(true);
+                user.setActive(true);
+
+                if ((user.getName() == null || user.getName().isEmpty()) && githubUser.getName() != null) {
+                    user.setName(githubUser.getName());
+                }
+
+                user = userRepository.save(user);
+            }
         }
 
         if (user == null) {
@@ -78,7 +120,7 @@ public class GithubAuthService {
             user.setPicture(githubUser.getAvatarUrl());
             user.setEmailVerified(true);
             user.setActive(true);
-            user.setUsername(githubUser.getLogin()); // ← username de GitHub
+            user.setUsername(githubUser.getLogin());
             user = userRepository.save(user);
             isNewUser = true;
         }
@@ -90,6 +132,49 @@ public class GithubAuthService {
         response.setUser(user);
         response.setNewUser(isNewUser);
         response.setRequiresAdditionalInfo(isNewUser);
+        response.setEmailRequired(false);
+
+        return response;
+    }
+
+    public AuthResponse completeGithubEmail(User user, String email) {
+
+        if (user == null) {
+            throw new RuntimeException("Usuario no válido");
+        }
+
+        if (!"GITHUB".equals(user.getAuthProvider())) {
+            throw new RuntimeException("El usuario no pertenece a autenticación con GitHub");
+        }
+
+        if (!StringUtils.hasText(email)) {
+            throw new RuntimeException("El email es obligatorio");
+        }
+
+        String normalizedEmail = email.trim().toLowerCase();
+
+        User existingUser = userRepository.getUserByEmail(normalizedEmail);
+        if (existingUser != null && !existingUser.getId().equals(user.getId())) {
+            throw new RuntimeException("El email ya está registrado por otro usuario");
+        }
+
+        user.setEmail(normalizedEmail);
+        user.setEmailVerified(true);
+        user.setActive(true);
+
+        if (user.getName() == null || user.getName().isBlank()) {
+            user.setName("Usuario GitHub");
+        }
+
+        user = userRepository.save(user);
+
+        String token = jwtService.generateToken(user);
+
+        AuthResponse response = new AuthResponse();
+        response.setToken(token);
+        response.setUser(user);
+        response.setNewUser(false);
+        response.setRequiresAdditionalInfo(false);
         response.setEmailRequired(false);
 
         return response;

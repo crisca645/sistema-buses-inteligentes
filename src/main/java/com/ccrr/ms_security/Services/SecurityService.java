@@ -268,6 +268,47 @@ public class SecurityService {
         newUser.setName(StringUtils.hasText(name) ? name : "Usuario");
         newUser.setLastname(StringUtils.hasText(lastname) ? lastname : "OAuth");
         newUser.setPassword(theEncryptionService.convertSHA256(UUID.randomUUID().toString()));
+        newUser.setAuthProvider("GOOGLE");
+
+        return theUserRepository.save(newUser);
+    }
+
+    public User findOrCreateOAuthUser(String email,
+                                      String name,
+                                      String lastname,
+                                      String authProvider,
+                                      String providerId,
+                                      String picture,
+                                      Boolean emailVerified) {
+        if (!StringUtils.hasText(email)) {
+            return null;
+        }
+
+        String normalizedEmail = email.trim().toLowerCase();
+        User existingUser = theUserRepository.getUserByEmail(normalizedEmail);
+
+        if (existingUser != null) {
+            existingUser.setName(StringUtils.hasText(name) ? name : existingUser.getName());
+            existingUser.setLastname(StringUtils.hasText(lastname) ? lastname : existingUser.getLastname());
+            existingUser.setAuthProvider(authProvider);
+            existingUser.setProviderId(providerId);
+            existingUser.setPicture(picture);
+            existingUser.setEmailVerified(emailVerified);
+            existingUser.setActive(true);
+            return theUserRepository.save(existingUser);
+        }
+
+        User newUser = new User();
+        newUser.setEmail(normalizedEmail);
+        newUser.setName(StringUtils.hasText(name) ? name : "Usuario");
+        newUser.setLastname(StringUtils.hasText(lastname) ? lastname : "OAuth");
+        newUser.setPassword(theEncryptionService.convertSHA256(UUID.randomUUID().toString()));
+        newUser.setAuthProvider(authProvider);
+        newUser.setProviderId(providerId);
+        newUser.setPicture(picture);
+        newUser.setEmailVerified(emailVerified);
+        newUser.setActive(true);
+
         return theUserRepository.save(newUser);
     }
 
@@ -321,5 +362,25 @@ public class SecurityService {
                 : domainName.substring(0, 1) + "***";
 
         return maskedLocal + "@" + maskedDomain + domainExtension;
+    }
+
+    public User findById(String id) {
+        return theUserRepository.findById(id).orElse(null);
+    }
+
+    public User save(User user) {
+        return theUserRepository.save(user);
+    }
+
+    public User getUserFromToken(String token) {
+        User tokenUser = theJwtService.getUserFromToken(token);
+        if (tokenUser == null || tokenUser.getId() == null) {
+            return null;
+        }
+        return theUserRepository.findById(tokenUser.getId()).orElse(null);
+    }
+
+    public String encryptPassword(String password) {
+        return theEncryptionService.convertSHA256(password);
     }
 }
